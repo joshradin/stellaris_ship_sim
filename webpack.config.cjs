@@ -40,11 +40,16 @@ module.exports = function (env, argv) {
                     test: /\.tsx?$/,
                     use: 'ts-loader',
                     exclude: /node_modules/,
+                },
+                {
+                    test: /\.json$/,
+                    use: 'file-loader',
+                    exclude: /node_modules/
                 }
             ],
         },
         resolve: {
-            extensions: ['.tsx', '.ts', '.js', '.css', '.scss', '.sass'],
+            extensions: ['.tsx', '.ts', '.js', '.css', '.scss', '.sass', '.json'],
         },
         output: {
             clean: isProduction,
