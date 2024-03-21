@@ -6,7 +6,7 @@
 import type {Config} from 'jest';
 
 const config: Config = {
-    // All imported modules in your tests should be mocked automatically
+    // All imported devices in your tests should be mocked automatically
     // automock: false,
 
     // Stop running tests after `n` failures
@@ -77,7 +77,7 @@ const config: Config = {
     //   "node_modules"
     // ],
 
-    // An array of file extensions your modules use
+    // An array of file extensions your devices use
     // moduleFileExtensions: [
     //   "js",
     //   "mjs",
@@ -122,7 +122,7 @@ const config: Config = {
     // Automatically restore mock state and implementation before every test
     // restoreMocks: false,
 
-    // The root directory that Jest should scan for tests and modules within
+    // The root directory that Jest should scan for tests and devices within
     // rootDir: undefined,
 
     // A list of paths to directories that Jest should use to search for files in
@@ -133,16 +133,16 @@ const config: Config = {
     // Allows you to use a custom runner instead of Jest's default test runner
     // runner: "jest-runner",
 
-    // The paths to modules that run some code to configure or set up the testing environment before each test
+    // The paths to devices that run some code to configure or set up the testing environment before each test
     // setupFiles: [],
 
-    // A list of paths to modules that run some code to configure or set up the testing framework before each test
+    // A list of paths to devices that run some code to configure or set up the testing framework before each test
     // setupFilesAfterEnv: [],
 
     // The number of seconds after which a test is considered as slow and reported as such in the results.
     // slowTestThreshold: 5,
 
-    // A list of paths to snapshot serializer modules Jest should use for snapshot testing
+    // A list of paths to snapshot serializer devices Jest should use for snapshot testing
     // snapshotSerializers: [],
 
     // The test environment that will be used for testing
@@ -183,7 +183,7 @@ const config: Config = {
     //   "\\.pnp\\.[^\\/]+$"
     // ],
 
-    // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
+    // An array of regexp pattern strings that are matched against all devices before the module loader will automatically return a mock for them
     // unmockedModulePathPatterns: undefined,
 
     // Indicates whether each individual test should be reported during the run

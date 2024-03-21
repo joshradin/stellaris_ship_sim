@@ -45,6 +45,17 @@ module.exports = function (env, argv) {
                     test: /\.json$/,
                     use: 'file-loader',
                     exclude: /node_modules/
+                },
+                {
+                    test: /\.csv$/,
+                    use: {
+                        loader: "file-loader",
+                        options: {
+                            name: "static/[name].[ext]",
+                            emitFile: true
+                        }
+                    },
+                    exclude: /node_modules/,
                 }
             ],
         },

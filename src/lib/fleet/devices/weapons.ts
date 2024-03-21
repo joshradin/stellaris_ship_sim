@@ -1,6 +1,9 @@
-import {Cost} from "./Resources";
-import {SlotMap, WeaponComponentSlot} from "./ShipSchema";
+import {SlotMap, WeaponComponentSlot} from "../ShipSchema";
 import _ from "lodash";
+import Device from "./Device";
+import {SlotScaled} from "./index";
+import weapon_components_path from "./weapon_components.csv";
+import {parse} from "csv-parse/browser/esm";
 
 export interface Damage {
     damage: { low: number, high: number },
@@ -28,27 +31,27 @@ export type WeaponModifiers = {
     hull: number,
     armor: number,
     shield: number,
+    ignore?: {
+        hull?: number,
+        armor?: number,
+        shield?: number,
+    }
 };
+
 /**
  * Weapon components are devices that can be attached to military ships and are used to attack, damage and destroy other
  * ships, specifically any ships that have been designated as valid targets.
  */
-export default interface Weapon<T extends WeaponComponentSlot> extends Scaled<T> {
-    name: string,
+export interface Weapon<T extends WeaponComponentSlot> extends SlotScaled<T>, Device {
     kind: WeaponKind,
     modifiers: WeaponModifiers,
     slots: T[],
 }
 
-export type Scaled<T extends WeaponComponentSlot> = {
-    cost: SlotMap<T, Cost>,
-    damage: SlotMap<T, Damage>,
-    power: SlotMap<T, number>,
-}
 type WeaponComponentDescriptor<T extends WeaponComponentSlot> = {
     name: string,
     slots: T[],
-} & Scaled<T>
+} & SlotScaled<T>
 
 type WeaponKindDescriptor = {
     subKind?: string,
@@ -61,7 +64,7 @@ type WeaponKindDescriptorMap = Record<WeaponKind, WeaponKindDescriptor[]>;
 function createWeapon<T extends WeaponComponentSlot>(
     name: string,
     slots: T[],
-    cost: Scaled<T>
+    cost: SlotScaled<T>
 ): WeaponComponentDescriptor<T> {
     return _.merge({name, slots}, cost);
 }
@@ -85,7 +88,11 @@ const weaponDescriptors: WeaponKindDescriptorMap = {
                             medium: {alloy: 20},
                             small: {alloy: 10}
                         },
-                        power: undefined,
+                        power: {
+                            small: 5,
+                            medium: 13,
+                            large: 30
+                        },
                         damage: {
                             small: {
                                 damage: {
@@ -145,9 +152,87 @@ const weaponDescriptors: WeaponKindDescriptorMap = {
     "swarmer-missiles": [],
     "strike-craft": [],
     "flak-gun": [],
-    "point-defense": [],
+    "point-defense": [
+        {
+            modifiers: {
+                accuracy: 0.75,
+                armor: 2,
+                hull: 1,
+                shield: 0.25,
+                ignore: {
+                    armor: 0.25
+                }
+            },
+            weapons: [
+                createWeapon("sentinel point-defense",
+                    ["point-defense"] as const,
+                    {
+                        cost: {
+                            "point-defense": {
+                                alloy: 8
+                            }
+                        },
+                        damage: {
+                            "point-defense": {
+                                coolDown: 0.5,
+                                damage: {high: 4, low: 2},
+                                range: {max: 30, min: 0},
+                                tracking: .1
+                            }
+                        },
+                        power: {
+                            "point-defense": 5
+                        }
+                    }
+                ),
+                createWeapon("barrier point-defense",
+                    ["point-defense"] as const,
+                    {
+                        cost: {
+                            "point-defense": {
+                                alloy: 10
+                            }
+                        },
+                        damage: {
+                            "point-defense": {
+                                coolDown: 0.5,
+                                damage: {high: 6, low: 3},
+                                range: {max: 30, min: 0},
+                                tracking: .2
+                            }
+                        },
+                        power: {
+                            "point-defense": 7
+                        }
+                    }
+                ),
+                createWeapon("guardian point-defense",
+                    ["point-defense"] as const,
+                    {
+                        cost: {
+                            "point-defense": {
+                                alloy: 13
+                            }
+                        },
+                        damage: {
+                            "point-defense": {
+                                coolDown: 0.5,
+                                damage: {high: 8, low: 4},
+                                range: {max: 30, min: 0},
+                                tracking: .3
+                            }
+                        },
+                        power: {
+                            "point-defense": 10
+                        }
+                    }
+                )
+            ]
+        }
+    ],
     "perdition": []
 };
+
 
 export const weapons: Weapon<WeaponComponentSlot>[] = [];
 

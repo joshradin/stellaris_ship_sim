@@ -1,6 +1,6 @@
-import {weapons} from "./Weapon";
+import {weapons} from "./weapons";
 import * as util from "util";
-import {WeaponComponent} from "./components";
+import {WeaponComponent} from "../components";
 
 test("get weapons", () => {
     for (const weapon of weapons) {

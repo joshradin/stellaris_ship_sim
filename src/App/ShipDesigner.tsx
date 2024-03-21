@@ -1,22 +1,34 @@
 import {CorvetteSchema, ShipSchema} from "../lib/fleet";
 import {
-    Component,
-    ComponentSlot, IWeaponComponent,
-    SegmentSchema,
+    CoreComponentSlot,
+    createSegment, DestroyerSchema,
     ShipType,
     SlotCount,
-    SlotMap,
     WeaponComponentSlot
 } from "../lib/fleet/ShipSchema";
 import React, {useState} from "react";
-import Ship, {ComponentSlots, Segment, WeaponComponentSlots} from "../lib/fleet/Ship";
-import * as util from "util";
+import ShipDesignBuilder, {
+    CoreComponentSlots,
+    Segment,
+    ShipSummary,
+    WeaponComponentSlots
+} from "../lib/fleet/ShipDesignBuilder";
 import _ from "lodash";
-import {weapons} from "../lib/fleet/Weapon";
-import {weapon_components} from "../lib/fleet/components";
+import {
+    coreComponents,
+    ICoreComponent,
+    IWeaponComponent,
+    WeaponComponent,
+    weaponComponents
+} from "../lib/fleet/components";
+import ComponentMap, {
+    ComponentSlotsAction,
+    useComponentReducer
+} from "../components/ComponentMap";
 
 const shipSchemas: ShipSchema<ShipType>[] = [
-    CorvetteSchema.Schema
+    CorvetteSchema.Schema,
+    DestroyerSchema.Schema
 ]
 
 
@@ -43,42 +55,68 @@ export default function ShipDesigner() {
 }
 
 function SelectedShipDesigner<T extends ShipType>({schema}: { schema: ShipSchema<T> }) {
-    const [ship, setShip] = React.useState<Ship<T>>(new Ship(schema));
-    const stats = React.useMemo(() => ship.stats, [ship, ship.core, ship.stern, ship.bow]);
-    const [bow, setBow] = React.useState(ship.bow);
-    const [core, setCore] = React.useState(ship.core);
-    const [stern, setStern] = React.useState(ship.stern);
+    const [coreComponentSlots, coreReducer] = useComponentReducer<CoreComponentSlot, ICoreComponent<ShipType>>();
+    const [bow, setBow] = React.useState<Segment>();
+    const [core, setCore] = React.useState<Segment>();
+    const [stern, setStern] = React.useState<Segment>();
+    const [refresh, updateState] = React.useState<{}>();
+    const forceUpdate = React.useCallback(() => {
+        updateState({});
+    }, []);
+    const [stats, setStats] = React.useState<ShipSummary>()
 
     React.useEffect(() => {
-        ship.bow = bow;
-    }, [bow]);
+        const ship = new ShipDesignBuilder(schema, {
+            bow, core, stern
+        }, coreComponentSlots);
+        setStats(ship.summary)
+    }, [refresh, coreComponentSlots]);
+
     React.useEffect(() => {
-        ship.core = core;
-    }, [core]);
-    React.useEffect(() => {
-        ship.stern = stern;
-    }, [stern]);
+        setBow(undefined);
+        setCore(undefined);
+        setStern(undefined);
+        coreReducer({
+            action: "set-slots",
+            slots: schema.coreComponentSlots
+        });
+    }, [schema]);
+
+    if (!schema) {
+        return <p>Choose a ship</p>
+    }
 
 
     return (
         <div>
             <h1>{schema.shipType.toUpperCase()}</h1>
+            <h2>Core Components</h2>
+            <ComponentMap
+                componentSlots={coreComponentSlots}
+                reducer={coreReducer}
+                allComponents={coreComponents.filter(component => component.shipType === schema.shipType)}
+                owner={"ship"}
+                shipType={schema.shipType}
+                defaultValue={"last"}
+            />
             <div>
                 {
                     schema.segmentSlots.bow && (
-                        <SegmentDesigner where={"bow"} segment={bow} setSegment={setBow} ship={ship}/>
-
+                        <SegmentDesigner where={"bow"} segment={bow} setSegment={setBow} schema={schema}
+                                         updateDesigner={forceUpdate}/>
                     )
                 }
 
                 {
                     schema.segmentSlots.core && (
-                        <SegmentDesigner where={"core"} segment={core} setSegment={setCore} ship={ship}/>
+                        <SegmentDesigner where={"core"} segment={core} setSegment={setCore} schema={schema}
+                                         updateDesigner={forceUpdate}/>
                     )
                 }
                 {
                     schema.segmentSlots.stern && (
-                        <SegmentDesigner where={"stern"} segment={stern} setSegment={setStern} ship={ship}/>
+                        <SegmentDesigner where={"stern"} segment={stern} setSegment={setStern} schema={schema}
+                                         updateDesigner={forceUpdate}/>
                     )
                 }
             </div>
@@ -88,45 +126,36 @@ function SelectedShipDesigner<T extends ShipType>({schema}: { schema: ShipSchema
                     whiteSpace: 'pre'
                 }}>
                     {JSON.stringify(stats, undefined, 2)}
-                    {new Date().toISOString()}
                 </code>
-
+                <br/>
+                {new Date().toISOString()}
             </div>
         </div>
     )
-}
-
-type ComponentSlotsAction<K extends ComponentSlot, V> = {
-    action: "clear-slots"
-} | {
-    action: "set-slots",
-    slots: K[]
-}
-
-function componentSlotsReducer<K extends ComponentSlot, V extends Component>(slots: ComponentSlots<K, V>, action: ComponentSlotsAction<K, V>): ComponentSlots<K, V> {
-    if (action.action === "set-slots") {
-        return action.slots.map((k) => [k, null]);
-    } else if (action.action === "clear-slots") {
-        return [];
-    }
 }
 
 function SegmentDesigner<T extends ShipType>(props: {
     segment: Segment,
     setSegment: (segment: Segment) => void
     where: keyof ShipSchema<T>["segmentSlots"],
-    ship: Ship<T>
+    schema: ShipSchema<T>,
+    updateDesigner: () => void
 }) {
-    const {where, ship, segment, setSegment} = props;
+    const {
+        where,
+        schema, segment, setSegment, updateDesigner
+    } = props;
     const patterns = React.useMemo(() => {
-        return ship.schema.segmentSlots[where]
-    }, [where, ship]);
-    const [weaponComponentSlots, weaponReducer] =
-        React.useReducer((state: WeaponComponentSlots, action: ComponentSlotsAction<WeaponComponentSlot, IWeaponComponent<WeaponComponentSlot>>) => componentSlotsReducer(state, action), []);
+        return schema.segmentSlots[where]
+    }, [where, schema]);
+    const [
+        weaponComponentSlots,
+        weaponReducer
+    ] = useComponentReducer<WeaponComponentSlot, WeaponComponent<WeaponComponentSlot>>();
 
     const handleSelectPattern = (event: React.ChangeEvent<HTMLSelectElement>) => {
         console.log(event);
-        setSegment(ship.createSegment(where, event.currentTarget.value));
+        setSegment(createSegment(schema, where, event.currentTarget.value));
     };
 
     React.useEffect(() => {
@@ -144,7 +173,8 @@ function SegmentDesigner<T extends ShipType>(props: {
             if (!component) return;
             segment.setWeaponComponent(component, slotIndex[slot] || 0);
             slotIndex[slot] = (slotIndex[slot] || 0) + 1;
-        })
+        });
+        updateDesigner();
     }, [weaponComponentSlots])
 
     return (
@@ -159,54 +189,13 @@ function SegmentDesigner<T extends ShipType>(props: {
                     })
                 }
             </select>
-            <div>
-                <h3>Weapons</h3>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Slot</th>
-                        <th>Component</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {
-                        (weaponComponentSlots.map(([slot, component], index) => {
-                            return (<tr key={`weapon-${index}`}>
-                                <td>{slot}</td>
-                                <td>
-                                    <p>selected: {component?.weapon.name}</p>
-                                    <ComponentSelect components={
-                                        weapon_components.filter(weapon => weapon.slot === slot)
-                                    } onSelect={() => {
-                                    }}/>
-                                </td>
-                            </tr>)
-                        }))
-                    }
-                    </tbody>
-
-                </table>
-
-            </div>
+            {segment && <ComponentMap componentSlots={weaponComponentSlots}
+                                      owner={segment.name}
+                                      reducer={weaponReducer}
+                                      allComponents={weaponComponents}
+                                      shipType={schema.shipType}
+            />}
         </div>
     )
 }
 
-function ComponentSelect<T extends Component>(props: {
-    components: T[],
-    onSelect: (component: T) => void
-}) {
-    let {components, onSelect} = props;
-
-
-    return (
-        <select>
-            <option></option>
-            {
-                components.map(component => {
-                    return (<option>{component.getName()}</option>)
-                })
-            }
-        </select>
-    )
-}

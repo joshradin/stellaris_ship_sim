@@ -1,6 +1,6 @@
 import {Cost, Resource} from "./Resources";
-import {ShipStats} from "./Ship";
-import Weapon from "./Weapon";
+import {Segment} from "./ShipDesignBuilder";
+import {IComponent} from "./components";
 
 export type ShipType = "corvette" | "frigate" | "destroyer" | "cruiser" | "battleship" | "titan" | "juggernaut";
 
@@ -24,8 +24,17 @@ export default interface ShipSchema<T extends ShipType> {
     readonly baseEvasion: number;
     readonly baseSpeed: number;
     readonly baseDisengagementChance: number;
-    readonly upkeep: ((base: Cost, components: IComponent<ComponentSlot>[]) => Cost);
+    readonly upkeep: ((base: Cost, components: IComponent<ComponentSlot, any>[]) => Cost);
 
+}
+
+export function createSegment<T extends ShipType>(schema: ShipSchema<T>, slot: keyof ShipSchema<T>["segmentSlots"], segmentName: string): Segment | undefined {
+    const found = schema.segmentSlots[slot].find(segment => segment.name === segmentName);
+    return found && new Segment(
+        found.name,
+        found.weaponSlots,
+        found.utilitySlots
+    )
 }
 
 export interface SegmentSchema<T extends ShipType> {
@@ -40,53 +49,41 @@ export type ComponentSlot =
     | "medium"
     | "large"
     | "extra-large"
-    | "point-defence"
+    | "point-defense"
     | "guided"
     | "hanger"
     | "auxiliary"
-    | "core"
     | "titan"
+    | "reactor"
+    | "ftl-drive"
+    | "computer-system"
+    | "thrusters"
+    | "sensors"
+    | "aura"
     | "world-destroyer";
 
-export type WeaponComponentSlot = Exclude<ComponentSlot, "auxiliary" | "core">;
+export type CoreComponentSlot = Extract<ComponentSlot, "reactor"
+    | "ftl-drive"
+    | "computer-system"
+    | "thrusters"
+    | "sensors"
+    | "aura">;
+export type WeaponComponentSlot = Extract<ComponentSlot, "small" | "medium" | "large" | "extra-large"
+    | "point-defense"
+    | "guided"
+    | "hanger"
+    | "auxiliary"
+    | "titan" | "world-destroyer">;
 export type UtilityComponentSlot = Extract<ComponentSlot, "small" | "medium" | "large" | "auxiliary">;
+
 
 export type SlotMap<C extends ComponentSlot, V> = {
     [K in C]?: V
 }
 export type SlotCount<S extends ComponentSlot> = SlotMap<S, number>;
 
-interface IComponent<T extends ComponentSlot> {
-    readonly componentKind: "weapon" | "utility" | "core"
-    readonly slot: T,
-    readonly baseCost: Cost,
-    readonly upkeep: Cost,
 
-    getName(): string;
-
-    getStats(): ShipStats;
-}
-
-export type CoreComponentSlot = "reactor" | "ftl-drive" | "computer-system" | "thrusters" | "sensors" | "aura";
-
-export interface CoreComponent {
-    readonly componentKind: "core";
-    coreSlot: CoreComponentSlot
-}
-
-export interface UtilityComponent extends IComponent<UtilityComponentSlot> {
-    readonly componentKind: "utility";
-}
-
-export interface IWeaponComponent<T extends WeaponComponentSlot> extends IComponent<WeaponComponentSlot> {
-    readonly componentKind: "weapon";
-    readonly weapon: Weapon<T>
-}
-
-export type Component = UtilityComponent | IWeaponComponent<WeaponComponentSlot>;
-
-
-function basicShipUpkeep(cost: Cost, components: IComponent<ComponentSlot>[]): Cost {
+function basicShipUpkeep(cost: Cost, components: IComponent<ComponentSlot, any>[]): Cost {
     let buildCost = 0;
     const costs = [cost].concat(components.map(component => component.baseCost));
     for (let cost of costs) {
@@ -128,7 +125,7 @@ export namespace CorvetteSchema {
         name: "picket-ship",
         weaponSlots: {
             small: 2,
-            "point-defence": 1
+            "point-defense": 1
         },
         utilitySlots: {
             small: 3,
@@ -161,4 +158,106 @@ export namespace CorvetteSchema {
         ],
         shipSize: 1,
     };
+}
+
+export namespace DestroyerSchema {
+    export namespace Bow {
+        export const Artillery: SegmentSchema<"destroyer"> = {
+            shipType: "destroyer",
+            name: "artillery",
+            weaponSlots: {
+                large: 1
+            },
+            utilitySlots: {
+                small: 6,
+            }
+        }
+        export const GunShip: SegmentSchema<"destroyer"> = {
+            shipType: "destroyer",
+            name: "gunship",
+            weaponSlots: {
+                small: 2,
+                medium: 1
+            },
+            utilitySlots: {
+                small: 6,
+            }
+        }
+        export const PicketShip: SegmentSchema<"destroyer"> = {
+            shipType: "destroyer",
+            name: "picket-ship",
+            weaponSlots: {
+                small: 2,
+                "point-defense": 1
+            },
+            utilitySlots: {
+                small: 6
+            }
+        }
+    }
+    export namespace Stern {
+        export const Gunship: SegmentSchema<"destroyer"> = {
+            shipType: "destroyer",
+            name: "gunship",
+            weaponSlots: {
+                medium: 1
+            },
+            utilitySlots: {
+                auxiliary: 1,
+            }
+        }
+
+        export const Interceptor: SegmentSchema<"destroyer"> = {
+            shipType: "destroyer",
+            name: "interceptor",
+            weaponSlots: {
+                small: 2
+            },
+            utilitySlots: {
+                auxiliary: 2,
+            }
+        }
+
+        export const PicketShip: SegmentSchema<"destroyer"> = {
+            shipType: "destroyer",
+            name: "picket-ship",
+            weaponSlots: {
+                "point-defense": 2
+            },
+            utilitySlots: {
+                auxiliary: 1,
+            }
+        }
+    }
+    export const Schema: ShipSchema<"destroyer"> = {
+        shipType: "destroyer",
+        baseCost: {
+            "alloy": 60
+        },
+        baseDisengagementChance: 1.5,
+        baseEvasion: .2,
+        baseHull: 600,
+        baseSpeed: 120,
+        upkeep: basicShipUpkeep,
+        segmentSlots: {
+            bow: [
+                Bow.Artillery,
+                Bow.GunShip,
+                Bow.PicketShip
+            ],
+            stern: [
+                Stern.Gunship,
+                Stern.Interceptor,
+                Stern.PicketShip
+            ]
+        },
+        coreComponentSlots: [
+            "ftl-drive",
+            "reactor",
+            "computer-system",
+            "sensors",
+            "thrusters"
+        ],
+        shipSize: 2,
+    }
 }

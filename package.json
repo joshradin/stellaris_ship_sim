@@ -2,7 +2,6 @@
   "name": "stellaris_ship_sim",
   "version": "1.0.0",
   "description": "Stellaris Ship Simulator, for figuring out fleet designs",
-  "main": "index.js",
   "scripts": {
     "build:dev": "webpack build --mode development",
     "serve:dev": "webpack serve --mode development",
@@ -22,6 +21,10 @@
   "bugs": {
     "url": "https://github.com/joshradin/stellaris_ship_sim/issues"
   },
+  "browser": "src/index.tsx",
+  "browserslist": [
+    "defaults and fully supports es6-module"
+  ],
   "homepage": "https://github.com/joshradin/stellaris_ship_sim#readme",
   "devDependencies": {
     "@babel/core": "^7.24.0",
@@ -34,6 +37,7 @@
     "@types/react-dom": "^18.2.0",
     "babel-jest": "^29.7.0",
     "eslint": "^8.57.0",
+    "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.0",
     "jest": "^29.7.0",
     "ts-loader": "^9.5.1",
@@ -49,6 +53,7 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
+    "csv-parse": "^5.5.5",
     "lodash": "^4.17.21"
   }
 }
